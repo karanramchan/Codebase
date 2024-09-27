@@ -1,0 +1,66 @@
+# Use an official Python runtime as a parent image
+FROM python:3.10.6
+
+MAINTAINER Priyatosh Raut "priyatosh.raut@mediassist.in"
+EXPOSE 8085
+ENV TZ="Asia/Kolkata"
+
+
+RUN apt-get update \
+&& apt-get install -y libgl1-mesa-glx
+RUN apt-get install -y libglib2.0-0
+RUN apt-get install -y poppler-utils
+RUN apt-get install -y tesseract-ocr
+RUN apt-get install sudo
+RUN pip install --upgrade pip
+RUN apt-get update && apt-get install -y lsb-release && apt-get clean all
+RUN rm -rf /etc/apt/sources.list.d/mssqlserver-list
+# Copy the requirements.txt file into the container at /app
+COPY ./requirements.txt /requirements.txt
+
+# Install any needed packages specified in requirements.txt
+RUN pip3 install -r requirements.txt
+
+#RUN pip3 install pysqlite3-binary
+
+#RUN pip3 install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_lg-0.5.4.tar.gz
+
+#RUN apt-get upgrade sqlite
+
+RUN export OMP_THREAD_LIMIT=4
+
+#COPY ./odbc.sh /odbc.sh
+
+#RUN chmod +x odbc.sh
+#RUN ./odbc.sh
+
+
+RUN apt-get -y install gcc \ 
+    && apt-get -y install g++ \
+    && apt-get -y install unixodbc \
+    && apt-get -y install unixodbc-dev 
+
+RUN apt-get update && apt-get install -y gnupg2 unixodbc unixodbc-dev && \
+    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+    curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql17
+
+
+# Copy the rest of the application code into the container at /app
+COPY . .
+
+# Define environment variable
+#ENV NAME World
+
+# Set the working directory in the container
+#WORKDIR /app
+
+# Run main.py when the container launches
+#CMD ["python", "main.py"]
+#ENTRYPOINT ["python3", "main.py"]
+
+RUN pip install "uvicorn[standard]" gunicorn
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8085"]
+
+#RUN uvicorn main:app --reload
